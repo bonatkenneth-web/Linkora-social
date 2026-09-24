@@ -1,0 +1,38 @@
+# TruffleHog configuration — false-positive suppression for test fixtures
+# https://github.com/trufflesecurity/trufflehog#configuration
+
+# Paths to exclude from scanning entirely.
+# Add patterns for test fixtures, seed data, and example files that
+# intentionally contain placeholder credentials.
+exclude_paths:
+  - tests/migrations/seed-data.sql
+  - tests/integration/initdb.sql
+  - examples/
+
+# Detectors to skip globally (use sparingly — prefer path-level excludes).
+# Example: skip a detector that produces too many false positives for this repo.
+# exclude_detectors:
+#   - SomeDetectorName
+
+# Per-path allowlist entries.
+# Each entry must have a reason and at least one of: paths, regexes, commits.
+allow:
+  - reason: "Stellar testnet keypairs used exclusively in integration test fixtures"
+    paths:
+      - tests/integration/setup.ts
+      - tests/integration/e2e-lifecycle.test.ts
+      - tests/integration/e2e-social-graph.test.ts
+      - tests/integration/e2e-tipping.test.ts
+      - tests/integration/e2e-governance.test.ts
+      - tests/integration/e2e-dm-relay.test.ts
+
+  - reason: "Example .env files contain placeholder values, not real credentials"
+    paths:
+      - "**/.env.example"
+
+  - reason: "Docker Compose files contain example service passwords for local dev only"
+    paths:
+      - docker-compose.yml
+      - docker-compose.migrations.yml
+      - "services/**/docker-compose.yml"
+      - "tests/integration/docker-compose.test.yml"
