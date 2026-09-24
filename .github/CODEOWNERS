@@ -21,3 +21,12 @@ docs/                           @Epta-Node/maintainers
 
 # Integration test scripts
 tests/                          @Epta-Node/maintainers
+
+# New services (notification, search, media)
+services/notification/          @Epta-Node/maintainers
+services/search/                @Epta-Node/maintainers
+services/media/                 @Epta-Node/maintainers
+
+# New packages (reputation, analytics)
+packages/reputation/            @Epta-Node/maintainers
+packages/analytics/             @Epta-Node/maintainers
