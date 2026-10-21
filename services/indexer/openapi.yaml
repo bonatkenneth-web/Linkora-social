@@ -9,6 +9,49 @@ servers:
     description: Local development server
 
 paths:
+  /reputation/leaderboard:
+    get:
+      summary: Get the reputation leaderboard
+      operationId: getReputationLeaderboard
+      tags: [Reputation]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Opaque cursor returned by the previous page.
+      responses:
+        "200":
+          description: Ranked reputation entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [entries, nextCursor]
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      type: object
+                      required: [address, score, tier]
+                      properties:
+                        address: { type: string }
+                        username: { type: [string, "null"] }
+                        score: { type: integer }
+                        tier: { type: string }
+                  nextCursor: { type: [string, "null"] }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /profiles/{address}:
     get:
       summary: Get profile by address
