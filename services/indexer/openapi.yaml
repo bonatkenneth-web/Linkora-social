@@ -9,48 +9,57 @@ servers:
     description: Local development server
 
 paths:
-  /reputation/leaderboard:
+  /profiles/search:
     get:
-      summary: Get the reputation leaderboard
-      operationId: getReputationLeaderboard
-      tags: [Reputation]
+      summary: Search profiles by username
+      operationId: searchProfiles
+      tags: [Profiles]
       parameters:
+        - name: username
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+          description: Exact username lookup, case-insensitive.
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+          description: Case-insensitive username prefix for discovery search.
         - name: limit
           in: query
+          required: false
           schema:
             type: integer
             minimum: 1
             maximum: 100
-            default: 50
-        - name: cursor
-          in: query
-          schema:
-            type: string
-          description: Opaque cursor returned by the previous page.
+            default: 20
       responses:
         "200":
-          description: Ranked reputation entries
+          description: Exact username address or prefix search results.
           content:
             application/json:
               schema:
-                type: object
-                required: [entries, nextCursor]
-                properties:
-                  entries:
-                    type: array
-                    items:
-                      type: object
-                      required: [address, score, tier]
-                      properties:
-                        address: { type: string }
-                        username: { type: [string, "null"] }
-                        score: { type: integer }
-                        tier: { type: string }
-                  nextCursor: { type: [string, "null"] }
+                oneOf:
+                  - type: object
+                    required: [address]
+                    properties:
+                      address:
+                        type: [string, "null"]
+                  - type: object
+                    required: [profiles]
+                    properties:
+                      profiles:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Profile"
         "400":
           $ref: "#/components/responses/ValidationError"
-        "500":
-          $ref: "#/components/responses/InternalError"
 
   /profiles/{address}:
     get:

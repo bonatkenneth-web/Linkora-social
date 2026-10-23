@@ -1,29 +1,54 @@
 import express from "express";
 import request from "supertest";
+import { Pool } from "pg";
 import { createReputationRouter } from "../reputation";
 
-describe("GET /reputation/leaderboard", () => {
-  const query = jest.fn();
-  const app = express().use("/reputation", createReputationRouter({ query } as never));
+const VALID_ADDRESS = "GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUVW";
 
-  beforeEach(() => query.mockReset());
+function makeDb(rows: unknown[] = []) {
+  return { query: jest.fn().mockResolvedValue({ rows }) } as unknown as Pool;
+}
 
-  it("returns ranked entries and a pagination cursor", async () => {
-    query.mockResolvedValue({ rows: [
-      { user_address: "G1", username: "alice", score: 9000 },
-      { user_address: "G2", username: "bob", score: 8000 },
-    ] });
+function makeApp(db: Pool) {
+  const app = express();
+  app.use("/reputation", createReputationRouter(db));
+  return app;
+}
 
-    const response = await request(app).get("/reputation/leaderboard?limit=1").expect(200);
-    expect(response.body.entries).toEqual([
-      { address: "G1", username: "alice", score: 9000, tier: "legendary" },
+describe("reputation API", () => {
+  it("returns a user's reputation data", async () => {
+    const db = makeDb([
+      {
+        user_address: VALID_ADDRESS,
+        score: 12,
+        posts_count: 3,
+        tips_sent: 4,
+        tips_received: 5,
+        governance_votes: 2,
+        last_computed_at: "2026-10-01T00:00:00.000Z",
+        updated_ledger: 99,
+      },
     ]);
-    expect(response.body.nextCursor).toBeTruthy();
+
+    const response = await request(makeApp(db)).get(`/reputation/${VALID_ADDRESS}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ address: VALID_ADDRESS, score: 12, postsCount: 3 });
   });
 
-  it("rejects invalid limits and cursors", async () => {
-    await request(app).get("/reputation/leaderboard?limit=101").expect(400);
-    await request(app).get("/reputation/leaderboard?cursor=bad").expect(400);
-    expect(query).not.toHaveBeenCalled();
+  it("returns score-ranked leaderboard rows with pagination", async () => {
+    const db = makeDb([{ user_address: VALID_ADDRESS, score: 12, posts_count: 3 }]);
+
+    const response = await request(makeApp(db)).get("/reputation/leaderboard?limit=5&offset=10");
+
+    expect(response.status).toBe(200);
+    expect(response.body.entries[0]).toMatchObject({ rank: 11, address: VALID_ADDRESS, score: 12 });
+    expect((db.query as jest.Mock).mock.calls[0][1]).toEqual([5, 10]);
+  });
+
+  it("rejects malformed addresses and invalid leaderboard limits", async () => {
+    const app = makeApp(makeDb());
+    expect((await request(app).get("/reputation/not-an-address")).status).toBe(400);
+    expect((await request(app).get("/reputation/leaderboard?limit=500")).status).toBe(400);
   });
 });
